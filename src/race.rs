@@ -1,18 +1,18 @@
+#[macro_export]
 macro_rules! race {
-    ($($fut:ident),+ $(,)?) => {
-        {
-            use futures::future::Future;
-            use futures::pin_mut;
+    ($($fut:ident),+ $(,)?) => {{
+        let mut out = None;
+        use futures::pin_mut;
 
-            // Pin all the futures
-            $(pin_mut!($fut);)+
+        // Pin all the futures
+        $(pin_mut!($fut);)+
 
-            // Create the select! block
-            futures::select! {
-                $($fut_res = $fut => {
-                    return $fut_res;
-                })+
-            }
+        // Create the select! block
+        tokio::select! {
+            $(r = $fut => {
+                out = Some(r);
+            })+
         }
-    };
+        out.unwrap()
+    }};
 }

@@ -86,7 +86,7 @@ impl EventSource {
 
 #[cfg(test)]
 mod tests {
-    use crate::new_channel;
+    use crate::{new_channel, race};
     use anyhow::Result;
     use std::time::Duration;
     use tokio::time::timeout;
@@ -103,6 +103,33 @@ mod tests {
         });
 
         sink.post(10i32)?;
+        handle.await??;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_race() -> Result<()> {
+        let (sink, mut source) = new_channel();
+        let mut source2 = source.clone();
+
+        let handle = tokio::spawn(async move {
+            let wait_i32 = source.wait(|_: &i32| {
+                println!("i32");
+                Some(false)
+            });
+            let wait_u32 = source2.wait(|_: &u32| {
+                println!("u32");
+                Some(true)
+            });
+
+            let result = race!(wait_i32, wait_u32);
+
+            assert!(result.unwrap());
+            Ok::<_, anyhow::Error>(())
+        });
+
+        sink.post(10u32)?;
         handle.await??;
 
         Ok(())
