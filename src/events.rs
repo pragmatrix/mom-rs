@@ -6,7 +6,7 @@ use tokio::sync::broadcast::{Receiver, Sender};
 
 pub const CHANNEL_SIZE: usize = 16;
 
-pub fn new() -> (EventSink, EventSource) {
+pub fn new_channel() -> (EventSink, EventSource) {
     let (tx, rx) = tokio::sync::broadcast::channel(CHANNEL_SIZE);
     (EventSink { channel: tx }, EventSource { channel: rx })
 }
@@ -86,14 +86,14 @@ impl EventSource {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::new_channel;
     use anyhow::Result;
     use std::time::Duration;
     use tokio::time::timeout;
 
     #[tokio::test]
     async fn test_event_source() -> Result<()> {
-        let (sink, mut source) = new();
+        let (sink, mut source) = new_channel();
 
         let handle = tokio::spawn(async move {
             let result = timeout(Duration::from_secs(1), source.wait(|v: &i32| Some(*v))).await;
